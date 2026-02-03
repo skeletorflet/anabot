@@ -8,14 +8,28 @@ import html
 import uuid
 import aiohttp
 import aiosqlite
+import random
+import re
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 # Configuration
-SD_URL = "http://127.0.0.1:7860" 
+SD_URL = "http://localhost:7860"
+
 TOKEN = "7942698199:AAEg1z9jqhUp5GnClWepqTH9zyCzRB4ARfw"
 DB_NAME = "bot_data.db"
+
+BASE_PROMPT_PREFIX = ""
+BASE_PROMPT_SUFFIX = ",masterpiece,best quality,amazing quality"
+BASE_NEGATIVE_PROMPT = "bad quality,worst quality,worst detail,sketch,censor"
+BASE_WIDTH = 832
+BASE_HEIGHT = 1216
+BASE_STEPS = 30
+BASE_CFG_SCALE = 7.0
+BASE_ITER = 4
+BASE_SAMPLER = "Euler a"
+BASE_SCHEDULER = "Normal"
 
 # Enable logging
 logging.basicConfig(
@@ -26,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 async def init_db():
     async with aiosqlite.connect(DB_NAME) as db:
+        # Initial creation for fresh install (old schema support)
         await db.execute('''
             CREATE TABLE IF NOT EXISTS generations (
                 id TEXT PRIMARY KEY,
@@ -33,19 +48,18 @@ async def init_db():
                 seed INTEGER
             )
         ''')
-        await db.commit()
-
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        # DB Migration helper
+        
+        # Migrations
         try:
-            await db.execute("ALTER TABLE generations ADD COLUMN steps INTEGER DEFAULT 20")
-            await db.execute("ALTER TABLE generations ADD COLUMN cfg_scale REAL DEFAULT 7.0")
-            await db.execute("ALTER TABLE generations ADD COLUMN sampler_name TEXT DEFAULT 'Euler a'")
-            await db.execute("ALTER TABLE generations ADD COLUMN scheduler TEXT DEFAULT 'Normal'")
+            await db.execute(f"ALTER TABLE generations ADD COLUMN steps INTEGER DEFAULT {BASE_STEPS}")
+            await db.execute(f"ALTER TABLE generations ADD COLUMN cfg_scale REAL DEFAULT {BASE_CFG_SCALE}")
+            await db.execute(f"ALTER TABLE generations ADD COLUMN sampler_name TEXT DEFAULT '{BASE_SAMPLER}'")
+            await db.execute(f"ALTER TABLE generations ADD COLUMN scheduler TEXT DEFAULT '{BASE_SCHEDULER}'")
             logger.info("Database schema updated with new columns.")
         except Exception:
-            pass # Columns likely exist
+            pass # Columns likely exist or error adding them
 
+        # Ensure correct schema for future
         await db.execute('''
             CREATE TABLE IF NOT EXISTS generations (
                 id TEXT PRIMARY KEY,
@@ -159,12 +173,69 @@ async def download_image_to_base64(file_id, context):
     byte_array = await new_file.download_as_bytearray()
     return base64.b64encode(byte_array).decode('utf-8')
 
+def process_dynamic_keywords(prompt):
+    """
+    Scans resources folder for txt files.
+    If filename matches a word in prompt using regex word boundary, replaces it with {line|line|...}
+    using 5-10 random lines.
+    Uses re.sub to ensure each occurrence gets a FRESH random sample.
+    """
+    resources_dir = "resources"
+    if not os.path.exists(resources_dir):
+        return prompt
+        
+    for filename in os.listdir(resources_dir):
+        if filename.endswith(".txt"):
+            keyword = os.path.splitext(filename)[0]
+            
+            # Regex to find keyword as a whole word (so f_anime doesn't match f_anime_2)
+            # Escaping keyword just in case it has special chars
+            pattern = r'\b' + re.escape(keyword) + r'\b'
+            
+            if re.search(pattern, prompt):
+                file_path = os.path.join(resources_dir, filename)
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                        # Handle case where file might be one big line or mixed newlines
+                        # Also replace | with , to avoid breaking syntax inside options
+                        raw_lines = content.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+                        # Sanitize and unique
+                        lines = list(set(line.strip().replace('|', ',') for line in raw_lines if line.strip()))
+                    
+                    if not lines:
+                        continue
+                        
+                    def replace_callback(match):
+                        # Pick 10 to 15 lines (or all if fewer)
+                        count = min(len(lines), random.randint(10, 15))
+                        selected = random.sample(lines, count)
+                        # Construct dynamic prompt syntax: {a|b|c}
+                        return "{" + "|".join(selected) + "}"
+                    
+                    # Replace in prompt
+                    new_prompt = re.sub(pattern, replace_callback, prompt)
+                    
+                    if new_prompt != prompt:
+                         logger.info(f"Replaced keyword '{keyword}' with {len(lines)} available options.")
+                         prompt = new_prompt
+                    
+                except Exception as e:
+                    logger.error(f"Error processing resource {filename}: {e}")
+                    
+    return prompt
+
 async def generate_images(payload):
     """
     Generic generator using a full payload dict.
     """
     url = f"{SD_URL}/sdapi/v1/txt2img"
     timeout = aiohttp.ClientTimeout(total=None)
+
+    # DEBUG: Save payload
+    with open("debug_payload.json", "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+    logger.info("Saved debug_payload.json")
 
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.post(url, json=payload) as response:
@@ -222,7 +293,7 @@ async def generate_extras_upscale(payload):
                 raise Exception(f"Failed to decode JSON. Response text: {text[:200]}...") # Truncate for safety
 
             image_b64 = data.get('image', "")
-            info_json_str = data.get('html_info', '{}') # API returns html_info typically, or nothing useful in info
+            info_json_str = "{}" # data.get('html_info', '{}') returns HTML which crashes json.loads later
             
             # extras returns a single image
             decoded_images = []
@@ -238,6 +309,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     logger.info(f"Received prompt from {user_name}: {user_prompt}")
     
+    # Process Dynamic Keywords
+    processed_prompt = process_dynamic_keywords(user_prompt)
+    if processed_prompt != user_prompt:
+        logger.info(f"Expanded Prompt: {processed_prompt}")
+        # Note: We don't overwrite user_prompt for the "Generating..." message 
+        # so the user sees what they typed, but we use processed_prompt for generation.
+    
     status_msg = await context.bot.send_message(
         chat_id=chat_id, 
         text=f"🎨 Generando imagenes para: '{user_prompt}'\n⏳ Por favor espera..."
@@ -245,16 +323,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Base payload
     payload = {
-        "prompt": user_prompt + " ,masterpiece,best quality,amazing quality",
-        "negative_prompt": "bad quality,worst quality,worst detail,sketch,censor",
-        "steps": 15,
-        "cfg_scale": 5,
-        "width": 1024,
-        "height": 1024,
-        "n_iter": 2, 
+        "prompt": BASE_PROMPT_PREFIX + processed_prompt + BASE_PROMPT_SUFFIX,
+        "negative_prompt": BASE_NEGATIVE_PROMPT,
+        "steps": BASE_STEPS,
+        "cfg_scale": BASE_CFG_SCALE,
+        "width": BASE_WIDTH,
+        "height": BASE_HEIGHT,
+        "n_iter": BASE_ITER, 
         "batch_size": 1,
-        "sampler_name": "Euler",
-        "scheduler": "Normal",
+        "sampler_name": BASE_SAMPLER,
+        "scheduler": BASE_SCHEDULER,
     }
 
     try:
@@ -285,10 +363,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.effective_user.first_name
     original_prompt = cached_data['prompt'] 
     seed = cached_data['seed']
-    steps = cached_data.get('steps', 20)
-    cfg_scale = cached_data.get('cfg_scale', 7.0)
-    sampler_name = cached_data.get('sampler_name', 'Euler a')
-    scheduler = cached_data.get('scheduler', 'Normal')
+    steps = cached_data.get('steps', BASE_STEPS)
+    cfg_scale = cached_data.get('cfg_scale', BASE_CFG_SCALE)
+    sampler_name = cached_data.get('sampler_name', BASE_SAMPLER)
+    scheduler = cached_data.get('scheduler', BASE_SCHEDULER)
     
     # Status Message
     status_text = f"⚙️ Procesando {action.upper().replace('_', ' ')}...\n⏳ Por favor espera..."
@@ -307,12 +385,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if action == "upscale":
              # TXT2IMG UPSCALE (1.5x + ADetailer)
              payload = {
-                "prompt": original_prompt + " ,masterpiece,best quality,amazing quality",
-                "negative_prompt": "bad quality,worst quality,worst detail,sketch,censor",
+                "prompt": BASE_PROMPT_PREFIX + original_prompt + BASE_PROMPT_SUFFIX,
+                "negative_prompt": BASE_NEGATIVE_PROMPT,
                 "steps": steps,
                 "cfg_scale": cfg_scale,
-                "width": 1024,
-                "height": 1024,
+                "width": BASE_WIDTH,
+                "height": BASE_HEIGHT,
                 "n_iter": 1, 
                 "batch_size": 1,
                 "sampler_name": sampler_name,
@@ -339,12 +417,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif action == "repeat":
              # NEW VARIATION
              payload = {
-                "prompt": original_prompt + " ,masterpiece,best quality,amazing quality",
-                "negative_prompt": "bad quality,worst quality,worst detail,sketch,censor",
+                "prompt": BASE_PROMPT_PREFIX + original_prompt + BASE_PROMPT_SUFFIX,
+                "negative_prompt": BASE_NEGATIVE_PROMPT,
                 "steps": steps,
                 "cfg_scale": cfg_scale,
-                "width": 1024,
-                "height": 1024,
+                "width": BASE_WIDTH,
+                "height": BASE_HEIGHT,
                 "n_iter": 1,
                 "batch_size": 1, 
                 "sampler_name": sampler_name,
@@ -368,7 +446,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
              payload = {
                  "init_images": [base64_image],
                  "prompt": "best quality, masterpiece, highres, ultra detailed, 8k wallpaper",
-                 "negative_prompt": "blur, low quality, lowres, watermark, text, deformed, bad anatomy",
+                 "negative_prompt": BASE_NEGATIVE_PROMPT,
                  "steps": steps,
                  "sampler_name": sampler_name,
                  "cfg_scale": cfg_scale,
@@ -378,8 +456,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                  "script_name": "ultimate sd upscale",
                  "script_args": [
                     None,            # Dummy (README says null)
-                    1024,            # Tile width (Updated to 1024)
-                    1024,            # Tile height (Updated to 1024)
+                    BASE_WIDTH,            # Tile width (Updated to 1024)
+                    BASE_HEIGHT,            # Tile height (Updated to 1024)
                     12,              # Mask blur (User screenshot: 12)
                     64,              # Padding (User screenshot: 64)
                     64,              # Seams fix width
@@ -440,6 +518,21 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
              
              # For extras, info string might be different or empty, we handle it generic
              images_bytes, info_json_str = await generate_extras_upscale(payload)
+             
+             # RECONSTRUCT INFOTEXT FROM DB CACHE
+             # Since extras doesn't return generation params, we fake it so the caption looks good.
+             # Format: "Prompt\nSteps: XX, Sampler: YY, CFG scale: ZZ, Seed: SS, Size: WxH"
+             
+             synthetic_infotext = f"{original_prompt}\nSteps: {steps}, Sampler: {sampler_name}, CFG scale: {cfg_scale}, Seed: {seed}, Size: {BASE_WIDTH}x{BASE_HEIGHT}"
+             # Note: Size is hardcoded relative to base, but fast upscale is x3. 
+             # Maybe we show the *Target* size? 1024*3 = 3072. Let's start with base or maybe generic.
+             
+             synthetic_info = {
+                 "infotexts": [synthetic_infotext],
+                 "all_seeds": [seed]
+             }
+             info_json_str = json.dumps(synthetic_info)
+             
              next_source_action = "fast_upscale" # Result of fast upscale -> No buttons
 
         await process_and_send_images(context, chat_id, images_bytes, info_json_str, user_name, original_prompt, source_action=next_source_action)
@@ -474,10 +567,10 @@ async def process_and_send_images(context, chat_id, images_bytes, info_json_str,
         
         # EXTRACT METADATA for saving
         # parsed_data is from infotext, which is most reliable for what actually happened
-        meta_steps = int(parsed_data.get('Steps', 20))
-        meta_cfg = float(parsed_data.get('CFG scale', 7.0))
-        meta_sampler = parsed_data.get('Sampler', 'Euler a')
-        meta_scheduler = parsed_data.get('Schedule type', 'Normal') # New SD regex might parse this key
+        meta_steps = int(parsed_data.get('Steps', BASE_STEPS))
+        meta_cfg = float(parsed_data.get('CFG scale', BASE_CFG_SCALE))
+        meta_sampler = parsed_data.get('Sampler', BASE_SAMPLER)
+        meta_scheduler = parsed_data.get('Schedule type', BASE_SCHEDULER) # New SD regex might parse this key
 
         # We always save it, so even super upscaled images *could* be retrieved if we added buttons later
         await save_generation(req_id, base_prompt, int(current_seed) if current_seed else -1, meta_steps, meta_cfg, meta_sampler, meta_scheduler)
