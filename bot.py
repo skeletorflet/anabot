@@ -35,17 +35,51 @@ async def init_db():
         ''')
         await db.commit()
 
-async def save_generation(req_id, prompt, seed):
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        # DB Migration helper
+        try:
+            await db.execute("ALTER TABLE generations ADD COLUMN steps INTEGER DEFAULT 20")
+            await db.execute("ALTER TABLE generations ADD COLUMN cfg_scale REAL DEFAULT 7.0")
+            await db.execute("ALTER TABLE generations ADD COLUMN sampler_name TEXT DEFAULT 'Euler a'")
+            await db.execute("ALTER TABLE generations ADD COLUMN scheduler TEXT DEFAULT 'Normal'")
+            logger.info("Database schema updated with new columns.")
+        except Exception:
+            pass # Columns likely exist
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS generations (
+                id TEXT PRIMARY KEY,
+                prompt TEXT,
+                seed INTEGER,
+                steps INTEGER,
+                cfg_scale REAL,
+                sampler_name TEXT,
+                scheduler TEXT
+            )
+        ''')
+        await db.commit()
+
+async def save_generation(req_id, prompt, seed, steps, cfg_scale, sampler_name, scheduler):
     async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute('INSERT INTO generations (id, prompt, seed) VALUES (?, ?, ?)', (req_id, prompt, seed))
+        await db.execute(
+            'INSERT INTO generations (id, prompt, seed, steps, cfg_scale, sampler_name, scheduler) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            (req_id, prompt, seed, steps, cfg_scale, sampler_name, scheduler)
+        )
         await db.commit()
 
 async def get_generation(req_id):
     async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute('SELECT prompt, seed FROM generations WHERE id = ?', (req_id,)) as cursor:
+        async with db.execute('SELECT prompt, seed, steps, cfg_scale, sampler_name, scheduler FROM generations WHERE id = ?', (req_id,)) as cursor:
             row = await cursor.fetchone()
             if row:
-                return {'prompt': row[0], 'seed': row[1]}
+                return {
+                    'prompt': row[0], 
+                    'seed': row[1],
+                    'steps': row[2],
+                    'cfg_scale': row[3],
+                    'sampler_name': row[4],
+                    'scheduler': row[5]
+                }
             return None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -178,7 +212,15 @@ async def generate_extras_upscale(payload):
                 text = await response.text()
                 raise Exception(f"SD API Error {response.status}: {text}")
             
-            data = await response.json()
+            text = await response.text()
+            if not text:
+                raise Exception("API returned empty response")
+                
+            try:
+                data = json.loads(text)
+            except json.JSONDecodeError:
+                raise Exception(f"Failed to decode JSON. Response text: {text[:200]}...") # Truncate for safety
+
             image_b64 = data.get('image', "")
             info_json_str = data.get('html_info', '{}') # API returns html_info typically, or nothing useful in info
             
@@ -243,6 +285,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.effective_user.first_name
     original_prompt = cached_data['prompt'] 
     seed = cached_data['seed']
+    steps = cached_data.get('steps', 20)
+    cfg_scale = cached_data.get('cfg_scale', 7.0)
+    sampler_name = cached_data.get('sampler_name', 'Euler a')
+    scheduler = cached_data.get('scheduler', 'Normal')
     
     # Status Message
     status_text = f"⚙️ Procesando {action.upper().replace('_', ' ')}...\n⏳ Por favor espera..."
@@ -263,14 +309,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
              payload = {
                 "prompt": original_prompt + " ,masterpiece,best quality,amazing quality",
                 "negative_prompt": "bad quality,worst quality,worst detail,sketch,censor",
-                "steps": 15,
-                "cfg_scale": 5,
+                "steps": steps,
+                "cfg_scale": cfg_scale,
                 "width": 1024,
                 "height": 1024,
                 "n_iter": 1, 
                 "batch_size": 1,
-                "sampler_name": "Euler",
-                "scheduler": "Normal",
+                "sampler_name": sampler_name,
+                "scheduler": scheduler,
                 "seed": seed,
                 "enable_hr": True,
                 "denoising_strength": 0.4,
@@ -295,12 +341,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
              payload = {
                 "prompt": original_prompt + " ,masterpiece,best quality,amazing quality",
                 "negative_prompt": "bad quality,worst quality,worst detail,sketch,censor",
-                "steps": 15,
-                "cfg_scale": 5,
+                "steps": steps,
+                "cfg_scale": cfg_scale,
                 "width": 1024,
                 "height": 1024,
                 "n_iter": 1,
                 "batch_size": 1, 
+                "sampler_name": sampler_name,
+                "scheduler": scheduler,
                 "seed": -1 
              }
              images_bytes, info_json_str = await generate_images(payload)
@@ -321,13 +369,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                  "init_images": [base64_image],
                  "prompt": "best quality, masterpiece, highres, ultra detailed, 8k wallpaper",
                  "negative_prompt": "blur, low quality, lowres, watermark, text, deformed, bad anatomy",
-                 "steps": 30,
-                 "sampler_name": "DPM++ 2M Karras",
-                 "cfg_scale": 7,
+                 "steps": steps,
+                 "sampler_name": sampler_name,
+                 "cfg_scale": cfg_scale,
                  "denoising_strength": 0.35, # CRITICAL
                  "seed": -1, # Random seed per requirements (or could use same, but user prompt said -1)
-                 "sampler_name": "Euler",
-                 "scheduler": "Normal",
+                 "scheduler": scheduler,
                  "script_name": "ultimate sd upscale",
                  "script_args": [
                     None,            # Dummy (README says null)
@@ -424,8 +471,16 @@ async def process_and_send_images(context, chat_id, images_bytes, info_json_str,
         
         # Save to SQLite
         req_id = str(uuid.uuid4())
+        
+        # EXTRACT METADATA for saving
+        # parsed_data is from infotext, which is most reliable for what actually happened
+        meta_steps = int(parsed_data.get('Steps', 20))
+        meta_cfg = float(parsed_data.get('CFG scale', 7.0))
+        meta_sampler = parsed_data.get('Sampler', 'Euler a')
+        meta_scheduler = parsed_data.get('Schedule type', 'Normal') # New SD regex might parse this key
+
         # We always save it, so even super upscaled images *could* be retrieved if we added buttons later
-        await save_generation(req_id, base_prompt, int(current_seed) if current_seed else -1)
+        await save_generation(req_id, base_prompt, int(current_seed) if current_seed else -1, meta_steps, meta_cfg, meta_sampler, meta_scheduler)
         
         # Button Logic
         reply_markup = None
