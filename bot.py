@@ -168,6 +168,27 @@ async def generate_img2img(payload):
                 
             return decoded_images, info_json_str
 
+async def generate_extras_upscale(payload):
+    url = f"{SD_URL}/sdapi/v1/extra-single-image"
+    timeout = aiohttp.ClientTimeout(total=None)
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.post(url, json=payload) as response:
+            if response.status != 200:
+                text = await response.text()
+                raise Exception(f"SD API Error {response.status}: {text}")
+            
+            data = await response.json()
+            image_b64 = data.get('image', "")
+            info_json_str = data.get('html_info', '{}') # API returns html_info typically, or nothing useful in info
+            
+            # extras returns a single image
+            decoded_images = []
+            if image_b64:
+                 decoded_images.append(base64.b64decode(image_b64))
+                
+            return decoded_images, info_json_str
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_prompt = update.message.text
     user_name = update.effective_user.first_name
@@ -345,6 +366,35 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
              images_bytes, info_json_str = await generate_img2img(payload)
              next_source_action = "super_upscale" # Result of super -> No buttons
 
+        elif action == "fast_upscale":
+             # EXTRAS SINGLE IMAGE UPSCALE
+             if not query.message.document:
+                 await context.bot.send_message(chat_id=chat_id, text="❌ No se encontró documento base para upscale.")
+                 return
+
+             base64_image = await download_image_to_base64(query.message.document.file_id, context)
+             
+             payload = {
+                "resize_mode": 0,
+                "show_extras_results": True,
+                "gfpgan_visibility": 0,
+                "codeformer_visibility": 0,
+                "codeformer_weight": 0,
+                "upscaling_resize": 3,
+                "upscaling_resize_w": 512,
+                "upscaling_resize_h": 512,
+                "upscaling_crop": True,
+                "upscaler_1": "R-ESRGAN 4x+ Anime6B",
+                "upscaler_2": "None",
+                "extras_upscaler_2_visibility": 0,
+                "upscale_first": False,
+                "image": base64_image
+             }
+             
+             # For extras, info string might be different or empty, we handle it generic
+             images_bytes, info_json_str = await generate_extras_upscale(payload)
+             next_source_action = "fast_upscale" # Result of fast upscale -> No buttons
+
         await process_and_send_images(context, chat_id, images_bytes, info_json_str, user_name, original_prompt, source_action=next_source_action)
         await context.bot.delete_message(chat_id=chat_id, message_id=status_msg.message_id)
 
@@ -388,10 +438,12 @@ async def process_and_send_images(context, chat_id, images_bytes, info_json_str,
             ]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
+
         elif source_action == "upscale":
-            # Result of Upscale: [SUPER UPSCALE] only
+            # Result of Upscale: [SUPER UPSCALE] [FAST UPSCALE]
             keyboard = [[
-                InlineKeyboardButton("🚀 SUPER UPSCALE", callback_data=f"super_upscale:{req_id}")
+                InlineKeyboardButton("🚀 SUPER UPSCALE", callback_data=f"super_upscale:{req_id}"),
+                InlineKeyboardButton("⚡ FAST UPSCALE", callback_data=f"fast_upscale:{req_id}")
             ]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
