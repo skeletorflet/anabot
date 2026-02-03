@@ -13,7 +13,7 @@ from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 # Configuration
-SD_URL = "https://uvgiq-34-138-19-21.a.free.pinggy.link" 
+SD_URL = "http://127.0.0.1:7860" 
 TOKEN = "7942698199:AAEg1z9jqhUp5GnClWepqTH9zyCzRB4ARfw"
 DB_NAME = "bot_data.db"
 
