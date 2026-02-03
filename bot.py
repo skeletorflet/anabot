@@ -52,12 +52,24 @@ async def init_db():
         # Migrations
         try:
             await db.execute(f"ALTER TABLE generations ADD COLUMN steps INTEGER DEFAULT {BASE_STEPS}")
-            await db.execute(f"ALTER TABLE generations ADD COLUMN cfg_scale REAL DEFAULT {BASE_CFG_SCALE}")
-            await db.execute(f"ALTER TABLE generations ADD COLUMN sampler_name TEXT DEFAULT '{BASE_SAMPLER}'")
-            await db.execute(f"ALTER TABLE generations ADD COLUMN scheduler TEXT DEFAULT '{BASE_SCHEDULER}'")
-            logger.info("Database schema updated with new columns.")
+            logger.info("Column 'steps' added.")
         except Exception:
-            pass # Columns likely exist or error adding them
+            pass
+        try:
+            await db.execute(f"ALTER TABLE generations ADD COLUMN cfg_scale REAL DEFAULT {BASE_CFG_SCALE}")
+            logger.info("Column 'cfg_scale' added.")
+        except Exception:
+            pass
+        try:
+            await db.execute(f"ALTER TABLE generations ADD COLUMN sampler_name TEXT DEFAULT '{BASE_SAMPLER}'")
+            logger.info("Column 'sampler_name' added.")
+        except Exception:
+            pass
+        try:
+            await db.execute(f"ALTER TABLE generations ADD COLUMN scheduler TEXT DEFAULT '{BASE_SCHEDULER}'")
+            logger.info("Column 'scheduler' added.")
+        except Exception:
+            pass
 
         # Ensure correct schema for future
         await db.execute('''
@@ -337,7 +349,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         images_bytes, info_json_str = await generate_images(payload)
-        await process_and_send_images(context, chat_id, images_bytes, info_json_str, user_name, user_prompt, source_action="txt2img")
+        await process_and_send_images(context, chat_id, images_bytes, info_json_str, user_name, processed_prompt, source_action="txt2img")
         await context.bot.delete_message(chat_id=chat_id, message_id=status_msg.message_id)
 
     except Exception as e:
@@ -383,9 +395,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         next_source_action = "txt2img" # Default fallback
         
         if action == "upscale":
-             # TXT2IMG UPSCALE (1.5x + ADetailer)
-             payload = {
-                "prompt": BASE_PROMPT_PREFIX + original_prompt + BASE_PROMPT_SUFFIX,
+              # TXT2IMG UPSCALE (1.5x)
+              payload = {
+                "prompt": original_prompt, # Prompt from DB already has prefix/suffix
                 "negative_prompt": BASE_NEGATIVE_PROMPT,
                 "steps": steps,
                 "cfg_scale": cfg_scale,
@@ -400,24 +412,18 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "denoising_strength": 0.4,
                 "hr_scale": 1.5,
                 "hr_upscaler": "R-ESRGAN 4x+ Anime6B",
+                "hr_sampler_name": sampler_name,  # Match original
+                "hr_scheduler": scheduler,        # Match original
                 "hr_second_pass_steps": 20,
-                "alwayson_scripts": {
-                    "ADetailer": {
-                        "args": [
-                            {"ad_model": "face_yolov8n.pt"},
-                            {"ad_model": "mediapipe_face_full"},
-                            {"ad_model": "mediapipe_face_mesh_eyes_only"}
-                        ]
-                    }
-                }
-             }
-             images_bytes, info_json_str = await generate_images(payload)
-             next_source_action = "upscale" # Result of upscale -> shows Super Upscale
+                "alwayson_scripts": {} # Clear ADetailer for parity
+              }
+              images_bytes, info_json_str = await generate_images(payload)
+              next_source_action = "upscale" # Result of upscale -> shows Super Upscale
              
         elif action == "repeat":
-             # NEW VARIATION
+             # NEW VARIATION (Same expanded prompt, new seed)
              payload = {
-                "prompt": BASE_PROMPT_PREFIX + original_prompt + BASE_PROMPT_SUFFIX,
+                "prompt": original_prompt, 
                 "negative_prompt": BASE_NEGATIVE_PROMPT,
                 "steps": steps,
                 "cfg_scale": cfg_scale,
@@ -445,34 +451,34 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
              
              payload = {
                  "init_images": [base64_image],
-                 "prompt": "best quality, masterpiece, highres, ultra detailed, 8k wallpaper",
+                 "prompt": original_prompt, # Use original expanded prompt
                  "negative_prompt": BASE_NEGATIVE_PROMPT,
                  "steps": steps,
                  "sampler_name": sampler_name,
                  "cfg_scale": cfg_scale,
-                 "denoising_strength": 0.35, # CRITICAL
-                 "seed": -1, # Random seed per requirements (or could use same, but user prompt said -1)
+                 "denoising_strength": 0.35,
+                 "seed": seed, # Use original seed for consistency
                  "scheduler": scheduler,
                  "script_name": "ultimate sd upscale",
                  "script_args": [
-                    None,            # Dummy (README says null)
-                    BASE_WIDTH,            # Tile width (Updated to 1024)
-                    BASE_HEIGHT,            # Tile height (Updated to 1024)
-                    12,              # Mask blur (User screenshot: 12)
-                    64,              # Padding (User screenshot: 64)
-                    64,              # Seams fix width
-                    0.35,            # Seams fix denoise
-                    32,              # Seams fix padding
-                    4,               # Upscaler (Index 4 confirmed)
-                    True,            # Save upscaled image
-                    0,               # Redraw mode (Linear)
-                    False,           # Save seams fix image
-                    8,               # Seams fix mask blur
-                    0,               # Seams fix type (None)
-                    2,               # Target size type (Scale from image size)
-                    2048,            # Custom width
-                    2048,            # Custom height
-                    2.6              # Scale
+                    None,
+                    BASE_WIDTH,
+                    BASE_HEIGHT,
+                    12,
+                    64,
+                    64,
+                    0.35,
+                    32,
+                    4, # Upscaler index
+                    True,
+                    0,
+                    False,
+                    8,
+                    0,
+                    2, # Scale from image size
+                    2048,
+                    2048,
+                    2.0 # Standard 2x scale
                  ],
                  "alwayson_scripts": {
                      "ControlNet": {
@@ -567,13 +573,14 @@ async def process_and_send_images(context, chat_id, images_bytes, info_json_str,
         
         # EXTRACT METADATA for saving
         # parsed_data is from infotext, which is most reliable for what actually happened
+        actual_prompt = parsed_data.get('prompt', base_prompt) # This is the key fix: save expanded prompt
         meta_steps = int(parsed_data.get('Steps', BASE_STEPS))
         meta_cfg = float(parsed_data.get('CFG scale', BASE_CFG_SCALE))
         meta_sampler = parsed_data.get('Sampler', BASE_SAMPLER)
-        meta_scheduler = parsed_data.get('Schedule type', BASE_SCHEDULER) # New SD regex might parse this key
+        meta_scheduler = parsed_data.get('Schedule type', BASE_SCHEDULER)
 
         # We always save it, so even super upscaled images *could* be retrieved if we added buttons later
-        await save_generation(req_id, base_prompt, int(current_seed) if current_seed else -1, meta_steps, meta_cfg, meta_sampler, meta_scheduler)
+        await save_generation(req_id, actual_prompt, int(current_seed) if current_seed else -1, meta_steps, meta_cfg, meta_sampler, meta_scheduler)
         
         # Button Logic
         reply_markup = None
