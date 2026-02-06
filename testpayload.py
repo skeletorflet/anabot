@@ -7,6 +7,8 @@ import re
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+BASE_ITER = 4
+
 # Copied from bot.py
 def process_dynamic_keywords(prompt):
     """
@@ -42,8 +44,12 @@ def process_dynamic_keywords(prompt):
                         continue
                         
                     def replace_callback(match):
-                        # Use all available lines from the resource file
-                        selected = lines
+                        # Use a random subset of lines to prevent prompt explosion
+                        # User requested using BASE_ITER (5) count
+                        unique_options = list(lines)
+                        random.shuffle(unique_options)
+                        selected = unique_options[:BASE_ITER]
+                        
                         # Construct dynamic prompt syntax: {a|b|c}
                         return "{" + "|".join(selected) + "}"
                     
@@ -61,12 +67,18 @@ def process_dynamic_keywords(prompt):
 
 # Test function
 def test_randomization():
-    prompt = "generate f_anime"
+    prompt = "generate f_anime details"
     print(f"Original Prompt: {prompt}")
     
     # Ensure we are in the right directory or mock resources dir presence if needed
     # bot.py expects 'resources' dir in cwd
-    
+    if not os.path.exists("resources"):
+        print("Creating mock resources for test...")
+        os.makedirs("resources", exist_ok=True)
+        with open("resources/f_anime.txt", "w") as f:
+            for i in range(10):
+                f.write(f"line_{i}\n")
+
     expanded = process_dynamic_keywords(prompt)
     print(f"Expanded Prompt: {expanded}")
 

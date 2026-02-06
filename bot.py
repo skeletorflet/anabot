@@ -653,7 +653,10 @@ async def process_and_send_images(context, chat_id, images_bytes, info_json_str,
         
         # EXTRACT METADATA for saving
         # parsed_data is from infotext, which is most reliable for what actually happened
-        actual_prompt = parsed_data.get('prompt', base_prompt) # This is the key fix: save expanded prompt
+        # BUT we must save the Expanded/Dynamic prompt (base_prompt) so that 'Repeat' buttons
+        # can reuse the {a|b|c} syntax with new seeds. If we save parsed_data['prompt'], 
+        # we lock in the single resolved option.
+        actual_prompt = base_prompt 
         meta_steps = int(parsed_data.get('Steps', BASE_STEPS))
         meta_cfg = float(parsed_data.get('CFG scale', BASE_CFG_SCALE))
         meta_sampler = parsed_data.get('Sampler', BASE_SAMPLER)
