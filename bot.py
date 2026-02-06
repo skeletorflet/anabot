@@ -31,6 +31,12 @@ BASE_ITER = 4
 BASE_SAMPLER = "Euler a"
 BASE_SCHEDULER = "Normal"
 
+# Groq API Configuration
+GROQ_API_KEY = "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"
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_SYSTEM_PROMPT_FILE = "resources/groqaiprompt.txt"
+
 # Enable logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -313,6 +319,52 @@ async def generate_extras_upscale(payload):
                 
             return decoded_images, info_json_str
 
+async def enhance_prompt_with_groq(user_prompt):
+    """
+    Enhances user prompt using Groq API and system instructions.
+    """
+    if not os.path.exists(GROQ_SYSTEM_PROMPT_FILE):
+        logger.warning(f"Groq system prompt file not found: {GROQ_SYSTEM_PROMPT_FILE}")
+        return user_prompt
+
+    try:
+        with open(GROQ_SYSTEM_PROMPT_FILE, "r", encoding="utf-8") as f:
+            system_instruction = f.read()
+    except Exception as e:
+        logger.error(f"Error reading system prompt: {e}")
+        return user_prompt
+
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "model": GROQ_MODEL,
+        "messages": [
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": user_prompt}
+        ],
+        "temperature": 0.5,
+        "max_tokens": 1024
+    }
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(GROQ_URL, json=payload, headers=headers) as response:
+                if response.status != 200:
+                    text = await response.text()
+                    logger.error(f"Groq API Error {response.status}: {text}")
+                    return user_prompt
+                
+                data = await response.json()
+                enhanced_prompt = data['choices'][0]['message']['content'].strip()
+                logger.info("Prompt enhanced by Groq successfully.")
+                return enhanced_prompt
+    except Exception as e:
+        logger.error(f"Error calling Groq API: {e}")
+        return user_prompt
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_prompt = update.message.text
     user_name = update.effective_user.first_name
@@ -324,13 +376,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     processed_prompt = process_dynamic_keywords(user_prompt)
     if processed_prompt != user_prompt:
         logger.info(f"Expanded Prompt: {processed_prompt}")
-        # Note: We don't overwrite user_prompt for the "Generating..." message 
-        # so the user sees what they typed, but we use processed_prompt for generation.
     
+    # Send status message
     status_msg = await context.bot.send_message(
         chat_id=chat_id, 
-        text=f"🎨 Generando imagenes para: '{user_prompt}'\n⏳ Por favor espera..."
+        text=f"✨ Mejorando prompt con IA..."
     )
+
+    # Enhance with Groq
+    enhanced_prompt = await enhance_prompt_with_groq(processed_prompt)
+    if enhanced_prompt != processed_prompt:
+        logger.info(f"Groq Enhanced Prompt: {enhanced_prompt}")
+        await context.bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=status_msg.message_id,
+            text=f"🎨 Generando imagenes para: '\n{enhanced_prompt[:50]}...'\n⏳ Por favor espera..."
+        )
+        processed_prompt = enhanced_prompt # USE THE ENHANCED PROMPT
+    else:
+        # Fallback or no change
+        await context.bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=status_msg.message_id,
+            text=f"🎨 Generando imagenes para: '{user_prompt}'\n⏳ Por favor espera..."
+        )
 
     # Base payload
     payload = {
