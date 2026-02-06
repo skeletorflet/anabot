@@ -27,9 +27,10 @@ BASE_WIDTH = 832
 BASE_HEIGHT = 1216
 BASE_STEPS = 8
 BASE_CFG_SCALE = 1.0
-BASE_ITER = 4
+BASE_ITER = 5
 BASE_SAMPLER = "Euler a"
 BASE_SCHEDULER = "Normal"
+BASE_AI_PROMPT = False
 
 # Groq API Configuration
 GROQ_API_KEY = "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"
@@ -225,8 +226,12 @@ def process_dynamic_keywords(prompt):
                         continue
                         
                     def replace_callback(match):
-                        # Use all available lines from the resource file
-                        selected = lines
+                        # Use a random subset of lines to prevent prompt explosion
+                        # User requested using BASE_ITER (5) count
+                        unique_options = list(lines)
+                        random.shuffle(unique_options)
+                        selected = unique_options[:BASE_ITER]
+                        
                         # Construct dynamic prompt syntax: {a|b|c}
                         return "{" + "|".join(selected) + "}"
                     
@@ -377,27 +382,34 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if processed_prompt != user_prompt:
         logger.info(f"Expanded Prompt: {processed_prompt}")
     
-    # Send status message
-    status_msg = await context.bot.send_message(
-        chat_id=chat_id, 
-        text=f"✨ Mejorando prompt con IA..."
-    )
-
-    # Enhance with Groq
-    enhanced_prompt = await enhance_prompt_with_groq(processed_prompt)
-    if enhanced_prompt != processed_prompt:
-        logger.info(f"Groq Enhanced Prompt: {enhanced_prompt}")
-        await context.bot.edit_message_text(
-            chat_id=chat_id,
-            message_id=status_msg.message_id,
-            text=f"🎨 Generando imagenes para: '\n{enhanced_prompt[:50]}...'\n⏳ Por favor espera..."
+    # Send status message & Enhance (if enabled)
+    if BASE_AI_PROMPT:
+        status_msg = await context.bot.send_message(
+            chat_id=chat_id, 
+            text=f"✨ Mejorando prompt con IA..."
         )
-        processed_prompt = enhanced_prompt # USE THE ENHANCED PROMPT
+
+        # Enhance with Groq
+        enhanced_prompt = await enhance_prompt_with_groq(processed_prompt)
+        if enhanced_prompt != processed_prompt:
+            logger.info(f"Groq Enhanced Prompt: {enhanced_prompt}")
+            await context.bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=status_msg.message_id,
+                text=f"🎨 Generando imagenes para: '\n{enhanced_prompt[:50]}...'\n⏳ Por favor espera..."
+            )
+            processed_prompt = enhanced_prompt # USE THE ENHANCED PROMPT
+        else:
+            # Fallback or no change
+            await context.bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=status_msg.message_id,
+                text=f"🎨 Generando imagenes para: '{user_prompt}'\n⏳ Por favor espera..."
+            )
     else:
-        # Fallback or no change
-        await context.bot.edit_message_text(
-            chat_id=chat_id,
-            message_id=status_msg.message_id,
+        # Standard generation without AI
+        status_msg = await context.bot.send_message(
+            chat_id=chat_id, 
             text=f"🎨 Generando imagenes para: '{user_prompt}'\n⏳ Por favor espera..."
         )
 
