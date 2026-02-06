@@ -491,7 +491,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "enable_hr": True,
                 "denoising_strength": 0.4,
                 "hr_scale": 1.5,
-                "hr_upscaler": "R-ESRGAN 4x+ Anime6B",
+                "hr_upscaler": "4x-UltraSharp",
                 "hr_sampler_name": sampler_name,  # Match original
                 "hr_scheduler": scheduler,        # Match original
                 "hr_second_pass_steps": 4,
@@ -595,7 +595,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "upscaling_resize_w": 512,
                 "upscaling_resize_h": 512,
                 "upscaling_crop": True,
-                "upscaler_1": "R-ESRGAN 4x+ Anime6B",
+                "upscaler_1": "4x-UltraSharp",
                 "upscaler_2": "None",
                 "extras_upscaler_2_visibility": 0,
                 "upscale_first": False,
