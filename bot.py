@@ -414,7 +414,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "hr_upscaler": "R-ESRGAN 4x+ Anime6B",
                 "hr_sampler_name": sampler_name,  # Match original
                 "hr_scheduler": scheduler,        # Match original
-                "hr_second_pass_steps": 20,
+                "hr_second_pass_steps": 4,
                 "alwayson_scripts": {} # Clear ADetailer for parity
               }
               images_bytes, info_json_str = await generate_images(payload)
