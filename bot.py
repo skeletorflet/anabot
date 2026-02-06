@@ -25,9 +25,9 @@ BASE_PROMPT_SUFFIX = ",masterpiece,best quality,amazing quality"
 BASE_NEGATIVE_PROMPT = "bad quality,worst quality,worst detail,sketch,censor"
 BASE_WIDTH = 832
 BASE_HEIGHT = 1216
-BASE_STEPS = 30
-BASE_CFG_SCALE = 7.0
-BASE_ITER = 4
+BASE_STEPS = 8
+BASE_CFG_SCALE = 1.0
+BASE_ITER = 1
 BASE_SAMPLER = "Euler a"
 BASE_SCHEDULER = "Normal"
 
