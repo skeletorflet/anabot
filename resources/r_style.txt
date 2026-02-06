@@ -1,0 +1,47 @@
+(style:1.2): cyberpunk, neon lights, high tech, futuristic
+(style:1.2): steampunk, brass gears, steam, victorian industrial
+(style:1.2): watercolor painting, soft edges, artistic, flow
+(style:1.2): oil painting, textured brushstrokes, classical art
+(style:1.2): anime style, cel shaded, vibrant colors
+(style:1.2): realistic photography, 8k, highly detailed, photorealistic
+(style:1.2): 3d render, octane render, unreal engine 5, ray tracing
+(style:1.2): sketching, pencil drawing, graphite, rough lines
+(style:1.2): ink drawing, crosshatching, manga style, black and white
+(style:1.2): pixel art, 16-bit, retro game style
+(style:1.2): vaporwave, retro 80s, glitch art, neon purple and blue
+(style:1.2): gothic, dark, moody, atmospheric, intricate details
+(style:1.2): fantasy art, magical, ethereal, dreamlike
+(style:1.2): sci-fi, spaceship interior, alien technology, sleek
+(style:1.2): noir, high contrast, black and white photography, dramatic shadows
+(style:1.2): pop art, bold colors, comic book dots, warhol style
+(style:1.2): surrealism, dreamscape, salvador dali style, melting objects
+(style:1.2): impressionism, light and color, monet style
+(style:1.2): art nouveau, decorative, flowing lines, mucha style
+(style:1.2): baroque, ornate, dramatic lighting, caravaggio style
+(style:1.2): ukiyo-e, japanese woodblock print, traditional
+(style:1.2): graffiti, street art, spray paint, urban style
+(style:1.2): minimalism, simple shapes, clean lines, negative space
+(style:1.2): maximalism, cluttered, detailed, sensory overload
+(style:1.2): horror, eerie, unsettling, dark atmosphere
+(style:1.2): kawaii, cute, pastel colors, soft round shapes
+(style:1.2): chibi, small body, big head, cute anime style
+(style:1.2): mecha, giant robots, metallic, industrial
+(style:1.2): low poly, geometric shapes, flat shading, 3d model
+(style:1.2): retro futurism, 1950s view of the future, flying cars
+(style:1.2): stained glass, vibrant colors, black outlines, church window
+(style:1.2): mosaic, small tiles, intricate pattern
+(style:1.2): papercut art, layered paper, shadows, depth
+(style:1.2): claymation, plastic texture, stop motion look
+(style:1.2): cinematic, movie scene, dramatic lighting, anamorphic lens
+(style:1.2): concept art, digital painting, character design
+(style:1.2): matte painting, landscape, detailed background
+(style:1.2): line art, clean lines, no shading, coloring book style
+(style:1.2): vector art, scalable, sharp edges, illustrator style
+(style:1.2): pastel art, soft chalk, blended colors
+(style:1.2): charcoal drawing, smudged, dark blacks, textured
+(style:1.2): gouache, opaque watercolor, flat colors
+(style:1.2): acrylic painting, bright colors, quick drying
+(style:1.2): collage, mixed media, cut and paste
+(style:1.2): poster art, bold text, graphic design
+(style:1.2): tarot card style, symbolic, decorative border
+(style:1.2): comic book, halftone dots, speech bubbles, dynamic action

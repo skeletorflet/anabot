@@ -1,0 +1,45 @@
+art by greg rutkowski, (style:1.2): highly detailed, digital painting
+art by alphonse mucha, (style:1.2): art nouveau, decorative, flowing lines
+art by wlop, (style:1.2): digital art, fantasy, beautiful lighting, anime influence
+art by makoto shinkai, (style:1.2): anime landscape, vibrant clouds, detailed background
+art by vincent van gogh, (style:1.2): impressionism, swirl patterns, thick brushstrokes
+art by leonardo da vinci, (style:1.2): renaissance, anatomical, sketch style
+art by h.r. giger, (style:1.2): biomechanical, dark, alien, surreal
+art by hayao miyazaki, (style:1.2): studio ghibli style, whimsical, detailed nature
+art by salvador dali, (style:1.2): surrealism, melting, dreamlike
+art by pablo picasso, (style:1.2): cubism, abstract, geometric
+art by claude monet, (style:1.2): impressionism, light, nature, water lilies
+art by frida kahlo, (style:1.2): surreal portraits, mexican folk art influence
+art by banksy, (style:1.2): stencil art, graffiti, political, black and white
+art by junji ito, (style:1.2): horror manga, detailed lines, spiral patterns
+art by tim burton, (style:1.2): gothic, dark, spindly characters, quirky
+art by andy warhol, (style:1.2): pop art, repetition, bright colors
+art by gustav klimt, (style:1.2): golden phase, patterns, eroticism
+art by michelangelo, (style:1.2): renaissance sculpture, muscular forms, fresco
+art by rembrandt, (style:1.2): baroque, chiaroscuro, dramatic lighting
+art by yayoi kusama, (style:1.2): dots, pumpkins, infinity mirrors
+art by keith haring, (style:1.2): pop art, dancing figures, bold lines
+art by basquiat, (style:1.2): neo-expressionism, graffiti, chaotic
+art by zdislaw beksinski, (style:1.2): dystopian surrealism, decay, skeletal
+art by frank frazetta, (style:1.2): fantasy, conan, muscular heroes
+art by norman rockwell, (style:1.2): americana, realistic, storytelling
+art by edward hopper, (style:1.2): realism, loneliness, urban isolation
+art by bob ross, (style:1.2): wet on wet oil painting, landscapes, happy trees
+art by akira toriyama, (style:1.2): dragon ball style, sharp angles, dynamic
+art by kentaro miura, (style:1.2): berserk style, dark fantasy, extreme detail
+art by hirohiko araki, (style:1.2): jojo style, fashion poses, bold lines
+art by eiichiro oda, (style:1.2): one piece style, exaggerated features, unique
+art by tite kubo, (style:1.2): bleach style, stylish, sharp contrast
+art by masashi kishimoto, (style:1.2): naruto style, dynamic perspective
+art by rumiko takahashi, (style:1.2): retro anime, inuyasha style
+art by clamp, (style:1.2): shoujo style, long limbs, intricate details
+art by yoji shinkawa, (style:1.2): metal gear style, ink wash, brush strokes
+art by range murata, (style:1.2): last exile style, cute, steampunk
+art by ilya kuvshinov, (style:1.2): modern anime, pop style, female portraits
+art by rossdraws, (style:1.2): digital painting, vibrant, polished
+art by sakimichan, (style:1.2): digital painting, semi-realistic, glossy
+art by artgerm, (style:1.2): digital painting, comic book cover style, realistic
+art by loish, (style:1.2): digital art, flow, shape language, colors
+art by guweiz, (style:1.2): digital art, cinematic, moody lighting
+art by atey ghailan, (style:1.2): digital art, storytelling, painterly
+art by simon stalenhag, (style:1.2): sci-fi landscapes, retro futuristic, nostalgic

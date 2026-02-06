@@ -1,0 +1,46 @@
+(background:1.2): lush ancient forest, giant trees, mossy rocks, sunbeams filtering through leaves
+(background:1.2): futuristic cyberpunk city, neon signs, flying cars, rain slicked streets
+(background:1.2): medieval castle courtyard, stone walls, banners, torchlight
+(background:1.2): vast desert dunes at sunset, golden sand, clear sky, distant oasis
+(background:1.2): snowy mountain peak, blizzard, icy rocks, panoramic view
+(background:1.2): underwater coral reef, colorful fish, sun rays breaking surface, sunken ruins
+(background:1.2): outer space, nebula clouds, distant stars, planets, cosmic dust
+(background:1.2): cozy library interior, wall to wall books, fireplace, leather mood
+(background:1.2): abandoned hospital, peeling paint, rusty equipment, eerie atmosphere
+(background:1.2): japanese zen garden, cherry blossoms, koi pond, stone lantern
+(background:1.2): busy market street, stalls with goods, crowd, colorful awnings
+(background:1.2): floating island in sky, waterfalls falling into clouds, fantasy ruins
+(background:1.2): post-apocalyptic city ruins, overgrown vegetation, crumbled buildings
+(background:1.2): victorian london street, cobblestones, gas lamps, fog
+(background:1.2): crystal cave, glowing crystals, underground lake, stalactites
+(background:1.2): tropical beach paradise, white sand, palm trees, turquoise water
+(background:1.2): steampunk workshop, gears, brass pipes, tools, steam invention
+(background:1.2): magical wizard tower, potions, scrolls, telescope, starry window
+(background:1.2): flower field, sunflowers, blue sky, fluffy clouds
+(background:1.2): dark gothic cathedral, stained glass, gargoyles, candles
+(background:1.2): bamboo forest, tall green stalks, mist, path
+(background:1.2): luxury modern penthouse, glass walls, city skyline view, sleek furniture
+(background:1.2): ancient egyptian temple, hieroglyphs, desert sand, statues
+(background:1.2): candy land, chocolate river, lollipop trees, sugar hills
+(background:1.2): digital cyberspace, grid lines, data streams, virtual reality
+(background:1.2): wild west saloon, wooden bar, swinging doors, dusty
+(background:1.2): alien planet landscape, purple grass, double moon, strange flora
+(background:1.2): enchanted fairy forest, glowing mushrooms, fireflies, magic dust
+(background:1.2): industrial factory, conveyor belts, robotic arms, sparks
+(background:1.2): coffee shop interior, steam, pastries, rainy window
+(background:1.2): grand ballroom, chandeliers, marble floor, elegant curtains
+(background:1.2): spaceship bridge, control panels, view of stars, holographic displays
+(background:1.2): pirate ship deck, ocean waves, sails, ropes, cannon
+(background:1.2): autumn park, falling leaves, orange and red trees, park bench
+(background:1.2): ancient greek ruins, white marble columns, mediterranean sea view
+(background:1.2): swamp, murky water, twisted trees, fog, vines
+(background:1.2): ice cave, blue ice, frozen waterfall, icicles
+(background:1.2): volcano crater, lava, smoke, black rocks
+(background:1.2): aurora borealis, northern lights, snowy landscape, night sky
+(background:1.2): train station, steam train, commuters, clock tower
+(background:1.2): carnival at night, ferris wheel, lights, popcorn stand
+(background:1.2): greenhouse, exotic plants, glass roof, humidity
+(background:1.2): moon surface, craters, earth in sky, black void
+(background:1.2): subway station, tiles, graffiti, waiting platform
+(background:1.2): gladiator arena, sand, crowd, stone walls
+(background:1.2): dojo, tatami mats, wooden walls, scroll

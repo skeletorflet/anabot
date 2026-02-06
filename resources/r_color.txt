@@ -1,0 +1,46 @@
+(color:1.2): crimson red, dark blood red
+(color:1.2): azure blue, vivid sky blue
+(color:1.2): emerald green, lush forest green
+(color:1.2): golden yellow, metallic gold shimmer
+(color:1.2): royal purple, majestic violet
+(color:1.2): magenta pink, vibrant hot pink
+(color:1.2): cyan, electric blue neon
+(color:1.2): lime green, bright neon green
+(color:1.2): tangerine orange, citrus sunset
+(color:1.2): charcoal black, dark grey matte
+(color:1.2): pearl white, iridescent shimmer
+(color:1.2): pastel pink, soft cherry blossom
+(color:1.2): pastel blue, baby blue soft
+(color:1.2): pastel green, mint ice cream
+(color:1.2): lavender, soft purple floral
+(color:1.2): coral, warm pinkish orange
+(color:1.2): turquoise, caribbean sea blue
+(color:1.2): indigo, deep midnight blue
+(color:1.2): maroon, dark brownish red
+(color:1.2): olive green, military earth tone
+(color:1.2): beige, warm sand neutral
+(color:1.2): teal, dark cyan green
+(color:1.2): silver, metallic chrome reflection
+(color:1.2): bronze, antique metal finish
+(color:1.2): copper, reddish metal shine
+(color:1.2): rainbow, multicolored spectrum
+(color:1.2): monochromatic, black and white only
+(color:1.2): sepia, vintage photo tone
+(color:1.2): gradient, fading colors, sunset blend
+(color:1.2): neon, glowing bright lights
+(color:1.2): earthy tones, brown green and beige
+(color:1.2): cool tones, blue purple and teal
+(color:1.2): warm tones, red orange and yellow
+(color:1.2): midnight blue, near black darkness
+(color:1.2): ruby red, gemstone jewel tone
+(color:1.2): sapphire blue, deep jewel tone
+(color:1.2): amethyst purple, crystal violet
+(color:1.2): cream, off-white rich texture
+(color:1.2): peach, soft orange pink
+(color:1.2): slate grey, blueish grey stone
+(color:1.2): rust, oxidized red brown
+(color:1.2): mustard yellow, dark muted yellow
+(color:1.2): plum, dark reddish purple
+(color:1.2): mint, fresh light green
+(color:1.2): rose gold, pinkish metallic
+(color:1.2): holographic, changing colors, iridescent
