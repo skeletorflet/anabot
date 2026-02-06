@@ -219,9 +219,8 @@ def process_dynamic_keywords(prompt):
                         continue
                         
                     def replace_callback(match):
-                        # Pick 10 to 15 lines (or all if fewer)
-                        count = min(len(lines), random.randint(10, 15))
-                        selected = random.sample(lines, count)
+                        # Use all available lines from the resource file
+                        selected = lines
                         # Construct dynamic prompt syntax: {a|b|c}
                         return "{" + "|".join(selected) + "}"
                     

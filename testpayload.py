@@ -1,0 +1,74 @@
+import logging
+import os
+import random
+import re
+
+# Setup simpler logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Copied from bot.py
+def process_dynamic_keywords(prompt):
+    """
+    Scans resources folder for txt files.
+    If filename matches a word in prompt using regex word boundary, replaces it with {line|line|...}
+    using 5-10 random lines.
+    Uses re.sub to ensure each occurrence gets a FRESH random sample.
+    """
+    resources_dir = "resources"
+    if not os.path.exists(resources_dir):
+        return prompt
+        
+    for filename in os.listdir(resources_dir):
+        if filename.endswith(".txt"):
+            keyword = os.path.splitext(filename)[0]
+            
+            # Regex to find keyword as a whole word (so f_anime doesn't match f_anime_2)
+            # Escaping keyword just in case it has special chars
+            pattern = r'\b' + re.escape(keyword) + r'\b'
+            
+            if re.search(pattern, prompt):
+                file_path = os.path.join(resources_dir, filename)
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                        # Handle case where file might be one big line or mixed newlines
+                        # Also replace | with , to avoid breaking syntax inside options
+                        raw_lines = content.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+                        # Sanitize and unique
+                        lines = list(set(line.strip().replace('|', ',') for line in raw_lines if line.strip()))
+                    
+                    if not lines:
+                        continue
+                        
+                    def replace_callback(match):
+                        # Use all available lines from the resource file
+                        selected = lines
+                        # Construct dynamic prompt syntax: {a|b|c}
+                        return "{" + "|".join(selected) + "}"
+                    
+                    # Replace in prompt
+                    new_prompt = re.sub(pattern, replace_callback, prompt)
+                    
+                    if new_prompt != prompt:
+                         logger.info(f"Replaced keyword '{keyword}' with {len(lines)} available options.")
+                         prompt = new_prompt
+                    
+                except Exception as e:
+                    logger.error(f"Error processing resource {filename}: {e}")
+                    
+    return prompt
+
+# Test function
+def test_randomization():
+    prompt = "generate f_anime"
+    print(f"Original Prompt: {prompt}")
+    
+    # Ensure we are in the right directory or mock resources dir presence if needed
+    # bot.py expects 'resources' dir in cwd
+    
+    expanded = process_dynamic_keywords(prompt)
+    print(f"Expanded Prompt: {expanded}")
+
+if __name__ == "__main__":
+    test_randomization()
